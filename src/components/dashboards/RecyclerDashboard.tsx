@@ -1,25 +1,129 @@
-import { Calendar, MapPin, Clock, Users, Package, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Clock, Users, Package, AlertCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useToast } from '@/components/ui/use-toast';
+import { useState, useEffect } from 'react';
+import { recyclerApi, bookingApi, type PickupSlot, type Booking } from '@/services/api';
 
 interface RecyclerDashboardProps {
   onLogout: () => void;
 }
 
 const RecyclerDashboard = ({ onLogout }: RecyclerDashboardProps) => {
-  const mockSlots = [
-    { id: 1, date: '2024-01-15', time: '10:00-12:00', location: 'Ward 5A', capacity: 20, booked: 15, status: 'active' },
-    { id: 2, date: '2024-01-15', time: '14:00-16:00', location: 'Ward 5B', capacity: 25, booked: 8, status: 'active' },
-    { id: 3, date: '2024-01-16', time: '09:00-11:00', location: 'Ward 5A', capacity: 30, booked: 25, status: 'full' },
-  ];
+  const { toast } = useToast();
+  
+  // State management
+  const [slots, setSlots] = useState<PickupSlot[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const mockBookings = [
-    { id: 1, citizen: 'John Doe', address: '123 Green St', category: 'Recyclable', quantity: '5 kg', status: 'pending', time: '10:30 AM' },
-    { id: 2, citizen: 'Jane Smith', address: '456 Eco Ave', category: 'Organic', quantity: '3 kg', status: 'collected', time: '11:15 AM' },
-    { id: 3, citizen: 'Bob Wilson', address: '789 Leaf Rd', category: 'E-waste', quantity: '2 kg', status: 'pending', time: '12:00 PM' },
-  ];
+  // Mock recycler ID - in real app, this would come from auth context
+  const recyclerId = "550e8400-e29b-41d4-a716-446655440000";
+  const wardId = "550e8400-e29b-41d4-a716-446655440001";
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const [slotsData, bookingsData] = await Promise.all([
+          recyclerApi.getRecyclerSlots(recyclerId),
+          recyclerApi.getBookingsByWard(wardId)
+        ]);
+        
+        setSlots(slotsData);
+        setBookings(bookingsData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [recyclerId, wardId, toast]);
+
+  // Helper functions
+  const formatDateTime = (dateTime: string) => {
+    const date = new Date(dateTime);
+    return {
+      date: date.toLocaleDateString(),
+      time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+  };
+
+  const getSlotStatus = (slot: PickupSlot) => {
+    if (!slot.isActive) return 'inactive';
+    if (slot.currentBookingsCount >= slot.capacity) return 'full';
+    return 'active';
+  };
+
+  // CRUD operations
+  const handleDeleteSlot = async (slotId: string) => {
+    try {
+      await recyclerApi.deleteSlot(slotId);
+      setSlots(slots.filter(slot => slot.id !== slotId));
+      toast({
+        title: "Success",
+        description: "Slot deleted successfully",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to delete slot",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateBookingStatus = async (bookingId: string, status: string) => {
+    try {
+      await bookingApi.updateBookingStatus(bookingId, { status });
+      setBookings(bookings.map(booking => 
+        booking.id === bookingId 
+          ? { ...booking, status: status as Booking['status'] }
+          : booking
+      ));
+      toast({
+        title: "Success",
+        description: "Booking status updated successfully",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to update booking status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const activeSlots = slots.filter(slot => slot.isActive);
+  const totalBookings = bookings.length;
+  const pendingBookings = bookings.filter(b => b.status === 'PENDING');
+  const collectedBookings = bookings.filter(b => b.status === 'COLLECTED');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-recycler-blue/5 to-secondary/20 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-recycler-blue" />
+            <span className="ml-2 text-muted-foreground">Loading dashboard...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-recycler-blue/5 to-secondary/20 p-6">
@@ -44,7 +148,7 @@ const RecyclerDashboard = ({ onLogout }: RecyclerDashboardProps) => {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Calendar className="text-recycler-blue w-5 h-5" />
-                <span className="text-2xl font-bold text-recycler-blue">{mockSlots.filter(s => s.status === 'active').length}</span>
+                <span className="text-2xl font-bold text-recycler-blue">{activeSlots.length}</span>
               </div>
             </CardContent>
           </Card>
@@ -56,7 +160,7 @@ const RecyclerDashboard = ({ onLogout }: RecyclerDashboardProps) => {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Users className="text-citizen-green w-5 h-5" />
-                <span className="text-2xl font-bold">{mockBookings.length}</span>
+                <span className="text-2xl font-bold">{totalBookings}</span>
               </div>
             </CardContent>
           </Card>
@@ -68,7 +172,7 @@ const RecyclerDashboard = ({ onLogout }: RecyclerDashboardProps) => {
             <CardContent>
               <div className="flex items-center gap-2">
                 <AlertCircle className="text-eco-accent w-5 h-5" />
-                <span className="text-2xl font-bold">{mockBookings.filter(b => b.status === 'pending').length}</span>
+                <span className="text-2xl font-bold">{pendingBookings.length}</span>
               </div>
             </CardContent>
           </Card>
@@ -80,7 +184,7 @@ const RecyclerDashboard = ({ onLogout }: RecyclerDashboardProps) => {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Package className="text-authority-purple w-5 h-5" />
-                <span className="text-2xl font-bold">{mockBookings.filter(b => b.status === 'collected').length}</span>
+                <span className="text-2xl font-bold">{collectedBookings.length}</span>
               </div>
             </CardContent>
           </Card>
@@ -106,34 +210,46 @@ const RecyclerDashboard = ({ onLogout }: RecyclerDashboardProps) => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mockSlots.map((slot) => (
-                    <div key={slot.id} className="p-4 border border-border rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-medium">{slot.date} | {slot.time}</span>
+                  {slots.map((slot) => {
+                    const { date, time } = formatDateTime(slot.startTime);
+                    const { time: endTime } = formatDateTime(slot.endTime);
+                    const slotStatus = getSlotStatus(slot);
+                    
+                    return (
+                      <div key={slot.id} className="p-4 border border-border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                <span className="font-medium">{date} | {time}-{endTime}</span>
+                              </div>
+                              <Badge variant={slotStatus === 'active' ? 'default' : 'secondary'}>
+                                {slotStatus}
+                              </Badge>
                             </div>
-                            <Badge variant={slot.status === 'active' ? 'default' : 'secondary'}>
-                              {slot.status}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground">{slot.ward.name}</span>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Capacity: {slot.currentBookingsCount}/{slot.capacity} bookings
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">{slot.location}</span>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm">Edit</Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => slot.id && handleDeleteSlot(slot.id)}
+                            >
+                              Delete
+                            </Button>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            Capacity: {slot.booked}/{slot.capacity} bookings
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">Edit</Button>
-                          <Button variant="outline" size="sm">Delete</Button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -157,20 +273,26 @@ const RecyclerDashboard = ({ onLogout }: RecyclerDashboardProps) => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockBookings.map((booking) => (
+                    {bookings.map((booking) => (
                       <TableRow key={booking.id}>
-                        <TableCell className="font-medium">{booking.citizen}</TableCell>
-                        <TableCell>{booking.address}</TableCell>
-                        <TableCell>{booking.category}</TableCell>
-                        <TableCell>{booking.quantity}</TableCell>
+                        <TableCell className="font-medium">
+                          {`${booking.citizen.firstName} ${booking.citizen.lastName}`}
+                        </TableCell>
+                        <TableCell>{booking.citizen.address}</TableCell>
+                        <TableCell>{booking.wasteCategory.name}</TableCell>
+                        <TableCell>{booking.estimatedQuantity} kg</TableCell>
                         <TableCell>
-                          <Badge variant={booking.status === 'collected' ? 'default' : 'secondary'}>
-                            {booking.status}
+                          <Badge variant={booking.status === 'COLLECTED' ? 'default' : 'secondary'}>
+                            {booking.status.toLowerCase()}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {booking.status === 'pending' && (
-                            <Button size="sm" variant="outline">
+                          {booking.status === 'PENDING' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleUpdateBookingStatus(booking.id, 'COLLECTED')}
+                            >
                               Mark Collected
                             </Button>
                           )}
