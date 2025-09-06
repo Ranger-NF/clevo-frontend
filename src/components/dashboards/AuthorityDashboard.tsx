@@ -1,32 +1,125 @@
-import { BarChart3, Users, MapPin, Trash2, Award, TrendingUp } from 'lucide-react';
+import { BarChart3, Users, MapPin, Trash2, Award, TrendingUp, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
+import { useState, useEffect } from 'react';
+import { authorityApi, type User, type Ward, type WasteCategory } from '@/services/api';
 
 interface AuthorityDashboardProps {
   onLogout: () => void;
 }
 
 const AuthorityDashboard = ({ onLogout }: AuthorityDashboardProps) => {
-  const mockUsers = [
-    { id: 1, name: 'John Doe', email: 'john@example.com', type: 'citizen', status: 'active', ward: 'Ward 5A' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', type: 'recycler', status: 'active', ward: 'Ward 5B' },
-    { id: 3, name: 'Bob Wilson', email: 'bob@example.com', type: 'citizen', status: 'inactive', ward: 'Ward 5A' },
-  ];
+  const { toast } = useToast();
+  
+  // State management
+  const [users, setUsers] = useState<User[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+  const [wasteCategories, setWasteCategories] = useState<WasteCategory[]>([]);
+  const [dashboardData, setDashboardData] = useState<any>({
+    wasteTrend: null,
+    wasteByType: null,
+    wasteByRegion: null,
+    ecoPointsDistribution: null
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const mockWards = [
-    { id: '5A', name: 'Ward 5A', population: 15000, recyclers: 3, monthlyWaste: '2.5 tons', efficiency: 92 },
-    { id: '5B', name: 'Ward 5B', population: 18000, recyclers: 4, monthlyWaste: '3.1 tons', efficiency: 87 },
-    { id: '5C', name: 'Ward 5C', population: 12000, recyclers: 2, monthlyWaste: '1.8 tons', efficiency: 95 },
-  ];
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const [usersData, wardsData, wasteCategoriesData, wasteTrend, wasteByType, wasteByRegion, ecoPointsDistribution] = await Promise.all([
+          authorityApi.listUsers(),
+          authorityApi.listWards(),
+          authorityApi.listWasteCategories(),
+          authorityApi.getWasteTrend(),
+          authorityApi.getWasteByType(),
+          authorityApi.getWasteByRegion(),
+          authorityApi.getEcoPointsDistribution()
+        ]);
+        
+        setUsers(usersData);
+        setWards(wardsData);
+        setWasteCategories(wasteCategoriesData);
+        setDashboardData({
+          wasteTrend,
+          wasteByType,
+          wasteByRegion,
+          ecoPointsDistribution
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const wasteCategories = [
-    { name: 'Recyclable', percentage: 45, color: 'bg-citizen-green' },
-    { name: 'Organic', percentage: 35, color: 'bg-eco-secondary' },
-    { name: 'E-waste', percentage: 15, color: 'bg-recycler-blue' },
-    { name: 'Hazardous', percentage: 5, color: 'bg-authority-purple' },
-  ];
+    fetchData();
+  }, [toast]);
+
+  // User management functions
+  const handleActivateUser = async (userId: string) => {
+    try {
+      const updatedUser = await authorityApi.activateUser(userId);
+      setUsers(users.map(user => user.id === userId ? updatedUser : user));
+      toast({
+        title: "Success",
+        description: "User activated successfully",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to activate user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeactivateUser = async (userId: string) => {
+    try {
+      const updatedUser = await authorityApi.deactivateUser(userId);
+      setUsers(users.map(user => user.id === userId ? updatedUser : user));
+      toast({
+        title: "Success",
+        description: "User deactivated successfully",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to deactivate user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Calculate statistics
+  const activeUsers = users.filter(u => u.active);
+  const totalEcoPoints = dashboardData.ecoPointsDistribution?.total || 0;
+  const monthlyWaste = dashboardData.wasteTrend?.current || 0;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-authority-purple/5 to-secondary/20 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-authority-purple" />
+            <span className="ml-2 text-muted-foreground">Loading dashboard...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-authority-purple/5 to-secondary/20 p-6">
@@ -51,9 +144,9 @@ const AuthorityDashboard = ({ onLogout }: AuthorityDashboardProps) => {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Users className="text-authority-purple w-5 h-5" />
-                <span className="text-2xl font-bold text-authority-purple">1,247</span>
+                <span className="text-2xl font-bold text-authority-purple">{users.length}</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">+12% from last month</p>
+              <p className="text-xs text-muted-foreground mt-1">{activeUsers.length} active users</p>
             </CardContent>
           </Card>
 
@@ -64,7 +157,7 @@ const AuthorityDashboard = ({ onLogout }: AuthorityDashboardProps) => {
             <CardContent>
               <div className="flex items-center gap-2">
                 <MapPin className="text-recycler-blue w-5 h-5" />
-                <span className="text-2xl font-bold">{mockWards.length}</span>
+                <span className="text-2xl font-bold">{wards.length}</span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">All operational</p>
             </CardContent>
@@ -77,9 +170,9 @@ const AuthorityDashboard = ({ onLogout }: AuthorityDashboardProps) => {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Trash2 className="text-eco-secondary w-5 h-5" />
-                <span className="text-2xl font-bold">7.4 tons</span>
+                <span className="text-2xl font-bold">{monthlyWaste ? `${monthlyWaste} tons` : 'N/A'}</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">-8% reduction</p>
+              <p className="text-xs text-muted-foreground mt-1">This month</p>
             </CardContent>
           </Card>
 
@@ -90,9 +183,9 @@ const AuthorityDashboard = ({ onLogout }: AuthorityDashboardProps) => {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Award className="text-eco-accent w-5 h-5" />
-                <span className="text-2xl font-bold">45.2K</span>
+                <span className="text-2xl font-bold">{totalEcoPoints ? `${(totalEcoPoints / 1000).toFixed(1)}K` : 'N/A'}</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">+15% increase</p>
+              <p className="text-xs text-muted-foreground mt-1">Total distributed</p>
             </CardContent>
           </Card>
         </div>
@@ -111,20 +204,23 @@ const AuthorityDashboard = ({ onLogout }: AuthorityDashboardProps) => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {wasteCategories.map((category, index) => (
-                    <div key={category.name} className="space-y-2">
+                  {wasteCategories.slice(0, 4).map((category) => (
+                    <div key={category.id} className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>{category.name}</span>
-                        <span className="font-medium">{category.percentage}%</span>
+                        <span className="font-medium">{category.ecoPointsPerUnit} pts/unit</span>
                       </div>
                       <div className="w-full bg-secondary rounded-full h-2">
                         <div 
-                          className={`${category.color} h-2 rounded-full transition-all duration-300`}
-                          style={{ width: `${category.percentage}%` }}
+                          className="bg-gradient-to-r from-citizen-green to-eco-secondary h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(category.ecoPointsPerUnit * 10, 100)}%` }}
                         ></div>
                       </div>
                     </div>
                   ))}
+                  {wasteCategories.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">No waste categories found</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -140,28 +236,31 @@ const AuthorityDashboard = ({ onLogout }: AuthorityDashboardProps) => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Ward</TableHead>
-                      <TableHead>Population</TableHead>
-                      <TableHead>Recyclers</TableHead>
-                      <TableHead>Monthly Waste</TableHead>
-                      <TableHead>Efficiency</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Authority</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockWards.map((ward) => (
+                    {wards.map((ward) => (
                       <TableRow key={ward.id}>
                         <TableCell className="font-medium">{ward.name}</TableCell>
-                        <TableCell>{ward.population.toLocaleString()}</TableCell>
-                        <TableCell>{ward.recyclers}</TableCell>
-                        <TableCell>{ward.monthlyWaste}</TableCell>
+                        <TableCell>{ward.description}</TableCell>
+                        <TableCell>{ward.authority.firstName} {ward.authority.lastName}</TableCell>
+                        <TableCell>N/A</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={ward.efficiency > 90 ? 'default' : 'secondary'}>
-                              {ward.efficiency}%
-                            </Badge>
-                          </div>
+                          <Badge variant="default">Active</Badge>
                         </TableCell>
                       </TableRow>
                     ))}
+                    {wards.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          No wards found
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -222,17 +321,29 @@ const AuthorityDashboard = ({ onLogout }: AuthorityDashboardProps) => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {mockUsers.map((user) => (
+                  {users.slice(0, 5).map((user) => (
                     <div key={user.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
                       <div className="space-y-1">
-                        <div className="font-medium text-sm">{user.name}</div>
-                        <div className="text-xs text-muted-foreground">{user.type} • {user.ward}</div>
+                        <div className="font-medium text-sm">{user.firstName} {user.lastName}</div>
+                        <div className="text-xs text-muted-foreground">{user.role.toLowerCase()} • {user.email}</div>
                       </div>
-                      <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                        {user.status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={user.active ? 'default' : 'secondary'}>
+                          {user.active ? 'active' : 'inactive'}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => user.active ? handleDeactivateUser(user.id) : handleActivateUser(user.id)}
+                        >
+                          {user.active ? 'Deactivate' : 'Activate'}
+                        </Button>
+                      </div>
                     </div>
                   ))}
+                  {users.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">No users found</p>
+                  )}
                 </div>
               </CardContent>
             </Card>

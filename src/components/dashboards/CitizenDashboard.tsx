@@ -1,29 +1,106 @@
-import { Calendar, MapPin, Award, Recycle, Clock, CheckCircle } from 'lucide-react';
+import { Calendar, MapPin, Award, Recycle, Clock, CheckCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/components/ui/use-toast';
+import { useState, useEffect } from 'react';
+import { citizenApi, type Booking, type PickupSlot, type Reward } from '@/services/api';
 
 interface CitizenDashboardProps {
   onLogout: () => void;
 }
 
 const CitizenDashboard = ({ onLogout }: CitizenDashboardProps) => {
-  const mockBookings = [
-    { id: 1, date: '2024-01-15', time: '10:00 AM', status: 'confirmed', category: 'Recyclable', points: 25 },
-    { id: 2, date: '2024-01-08', time: '2:00 PM', status: 'completed', category: 'Organic', points: 30 },
-    { id: 3, date: '2024-01-01', time: '11:30 AM', status: 'completed', category: 'E-waste', points: 50 },
-  ];
+  const { toast } = useToast();
+  
+  // State management
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [slots, setSlots] = useState<PickupSlot[]>([]);
+  const [totalPoints, setTotalPoints] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const mockRewards = [
-    { id: 1, name: 'Tree Sapling', points: 100, available: true },
-    { id: 2, name: 'Eco Bag', points: 50, available: true },
-    { id: 3, name: 'Plant Seeds Pack', points: 75, available: false },
-  ];
-
-  const totalPoints = 1250;
+  // Calculated values
   const monthlyTarget = 500;
-  const currentMonthPoints = 285;
+  const currentDate = new Date();
+  const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const currentMonthBookings = bookings.filter(b => new Date(b.createdAt) >= startOfMonth);
+  const currentMonthPoints = currentMonthBookings.reduce((sum, b) => sum + (b.wasteCategory.ecoPointsPerUnit * b.actualQuantity), 0);
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const [bookingsData, rewardsData, slotsData, totalPointsData] = await Promise.all([
+          citizenApi.getBookings(),
+          citizenApi.getAvailableRewards(),
+          citizenApi.getSlots(),
+          citizenApi.getTotalRewards()
+        ]);
+        
+        setBookings(bookingsData);
+        setRewards(rewardsData);
+        setSlots(slotsData);
+        setTotalPoints(totalPointsData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [toast]);
+
+  // Helper functions
+  const formatDateTime = (dateTime: string) => {
+    const date = new Date(dateTime);
+    return {
+      date: date.toLocaleDateString(),
+      time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+  };
+
+  const handleRedeemReward = async (rewardId: number) => {
+    try {
+      await citizenApi.redeemReward({ rewardId });
+      const newTotalPoints = await citizenApi.getTotalRewards();
+      setTotalPoints(newTotalPoints);
+      toast({
+        title: "Success",
+        description: "Reward redeemed successfully!",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to redeem reward",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-eco-light/5 to-secondary/20 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-eco-primary" />
+            <span className="ml-2 text-muted-foreground">Loading dashboard...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-eco-light/5 to-secondary/20 p-6">
@@ -75,7 +152,7 @@ const CitizenDashboard = ({ onLogout }: CitizenDashboardProps) => {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Calendar className="text-recycler-blue w-5 h-5" />
-                <span className="text-2xl font-bold">{mockBookings.filter(b => b.status === 'confirmed').length}</span>
+                <span className="text-2xl font-bold">{bookings.filter(b => b.status === 'CONFIRMED' || b.status === 'PENDING').length}</span>
               </div>
             </CardContent>
           </Card>
@@ -87,7 +164,7 @@ const CitizenDashboard = ({ onLogout }: CitizenDashboardProps) => {
             <CardContent>
               <div className="flex items-center gap-2">
                 <CheckCircle className="text-citizen-green w-5 h-5" />
-                <span className="text-2xl font-bold">{mockBookings.filter(b => b.status === 'completed').length}</span>
+                <span className="text-2xl font-bold">{bookings.filter(b => b.status === 'COLLECTED').length}</span>
               </div>
             </CardContent>
           </Card>
@@ -110,7 +187,7 @@ const CitizenDashboard = ({ onLogout }: CitizenDashboardProps) => {
                   Find Available Slots
                 </Button>
                 <p className="text-sm text-muted-foreground text-center">
-                  Next available slot: Today, 3:00 PM - 5:00 PM
+                  {slots.length > 0 ? `${slots.length} slots available` : 'No slots available'}
                 </p>
               </CardContent>
             </Card>
@@ -123,23 +200,30 @@ const CitizenDashboard = ({ onLogout }: CitizenDashboardProps) => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mockBookings.map((booking) => (
-                    <div key={booking.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium">{booking.date} at {booking.time}</span>
+                  {bookings.slice(0, 3).map((booking) => {
+                    const { date, time } = formatDateTime(booking.createdAt);
+                    const points = booking.wasteCategory.ecoPointsPerUnit * booking.actualQuantity;
+                    return (
+                      <div key={booking.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">{date} at {time}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground">{booking.wasteCategory.name} Waste</div>
                         </div>
-                        <div className="text-sm text-muted-foreground">{booking.category} Waste</div>
+                        <div className="text-right space-y-1">
+                          <Badge variant={booking.status === 'COLLECTED' ? 'default' : 'secondary'}>
+                            {booking.status.toLowerCase()}
+                          </Badge>
+                          <div className="text-sm font-medium text-eco-primary">+{Math.round(points)} points</div>
+                        </div>
                       </div>
-                      <div className="text-right space-y-1">
-                        <Badge variant={booking.status === 'completed' ? 'default' : 'secondary'}>
-                          {booking.status}
-                        </Badge>
-                        <div className="text-sm font-medium text-eco-primary">+{booking.points} points</div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+                  {bookings.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">No bookings yet</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -156,24 +240,28 @@ const CitizenDashboard = ({ onLogout }: CitizenDashboardProps) => {
                 <CardDescription>Redeem your eco-points</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {mockRewards.map((reward) => (
+                {rewards.map((reward) => (
                   <div key={reward.id} className="p-4 border border-border rounded-lg">
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-medium">{reward.name}</h4>
-                      <Badge variant={reward.available ? 'default' : 'secondary'}>
+                      <Badge variant="default">
                         {reward.points} pts
                       </Badge>
                     </div>
                     <Button 
                       size="sm" 
-                      disabled={!reward.available || totalPoints < reward.points}
+                      disabled={totalPoints < reward.points}
                       className="w-full"
-                      variant={reward.available && totalPoints >= reward.points ? "default" : "outline"}
+                      variant={totalPoints >= reward.points ? "default" : "outline"}
+                      onClick={() => handleRedeemReward(reward.id)}
                     >
-                      {reward.available && totalPoints >= reward.points ? 'Redeem' : 'Not Available'}
+                      {totalPoints >= reward.points ? 'Redeem' : 'Not Enough Points'}
                     </Button>
                   </div>
                 ))}
+                {rewards.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">No rewards available</p>
+                )}
               </CardContent>
             </Card>
 
@@ -187,15 +275,21 @@ const CitizenDashboard = ({ onLogout }: CitizenDashboardProps) => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-citizen-green">12.5 kg</div>
+                  <div className="text-2xl font-bold text-citizen-green">
+                    {bookings.reduce((sum, b) => sum + b.actualQuantity, 0).toFixed(1)} kg
+                  </div>
                   <div className="text-sm text-muted-foreground">Waste Recycled</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-recycler-blue">3.2 kg</div>
+                  <div className="text-2xl font-bold text-recycler-blue">
+                    {(bookings.reduce((sum, b) => sum + b.actualQuantity, 0) * 0.25).toFixed(1)} kg
+                  </div>
                   <div className="text-sm text-muted-foreground">CO₂ Saved</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-eco-accent">8</div>
+                  <div className="text-2xl font-bold text-eco-accent">
+                    {Math.floor(bookings.reduce((sum, b) => sum + b.actualQuantity, 0) * 0.64)}
+                  </div>
                   <div className="text-sm text-muted-foreground">Trees Equivalent</div>
                 </div>
               </CardContent>
