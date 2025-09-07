@@ -1,4 +1,4 @@
-import { Calendar, MapPin, Award, Recycle, Clock, CheckCircle, Loader2 } from 'lucide-react';
+import { Calendar, MapPin, Award, Recycle, Clock, CheckCircle, Loader2, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { useState, useEffect } from 'react';
 import { citizenApi, type Booking, type PickupSlot, type Reward } from '@/services/api';
+import BookingSlotDialog from '@/components/BookingSlotDialog';
 
 interface CitizenDashboardProps {
   onLogout: () => void;
@@ -21,6 +22,9 @@ const CitizenDashboard = ({ onLogout }: CitizenDashboardProps) => {
   const [totalPoints, setTotalPoints] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<PickupSlot | null>(null);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [showAvailableSlots, setShowAvailableSlots] = useState(false);
 
   // Calculated values
   const monthlyTarget = 500;
@@ -87,6 +91,31 @@ const CitizenDashboard = ({ onLogout }: CitizenDashboardProps) => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleBookSlot = (slot: PickupSlot) => {
+    setSelectedSlot(slot);
+    setBookingDialogOpen(true);
+  };
+
+  const handleBookingSuccess = () => {
+    // Refresh data after successful booking
+    const fetchData = async () => {
+      try {
+        const [bookingsData, slotsData, totalPointsData] = await Promise.all([
+          citizenApi.getBookings(),
+          citizenApi.getSlots(),
+          citizenApi.getTotalRewards()
+        ]);
+        
+        setBookings(bookingsData);
+        setSlots(slotsData);
+        setTotalPoints(totalPointsData);
+      } catch (err) {
+        console.error('Failed to refresh data:', err);
+      }
+    };
+    fetchData();
   };
 
   if (loading) {
@@ -182,13 +211,58 @@ const CitizenDashboard = ({ onLogout }: CitizenDashboardProps) => {
                 <CardDescription>Schedule a new waste pickup for your location</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button className="eco-button w-full" size="lg">
+                <Button 
+                  onClick={() => setShowAvailableSlots(!showAvailableSlots)}
+                  className="eco-button w-full font-montserrat" 
+                  size="lg"
+                >
                   <MapPin className="w-4 h-4 mr-2" />
-                  Find Available Slots
+                  {showAvailableSlots ? 'Hide Available Slots' : 'Find Available Slots'}
                 </Button>
                 <p className="text-sm text-muted-foreground text-center">
                   {slots.length > 0 ? `${slots.length} slots available` : 'No slots available'}
                 </p>
+                
+                {showAvailableSlots && slots.length > 0 && (
+                  <div className="space-y-3 mt-4 max-h-64 overflow-y-auto">
+                    {slots.map((slot) => {
+                      const { date, time } = formatDateTime(slot.startTime);
+                      const availableSpots = slot.capacity - slot.currentBookingsCount;
+                      
+                      return (
+                        <div key={slot.id} className="p-3 border border-border rounded-lg bg-card/50">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="space-y-1">
+                              <div className="font-medium">{slot.ward.name}</div>
+                              <div className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {date} at {time}
+                              </div>
+                              <div className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Users className="w-3 h-3" />
+                                {availableSpots} spots left
+                              </div>
+                            </div>
+                            <Button
+                              onClick={() => handleBookSlot(slot)}
+                              size="sm"
+                              className="bg-eco-primary hover:bg-eco-primary/90 font-montserrat"
+                              disabled={availableSpots <= 0}
+                            >
+                              {availableSpots <= 0 ? 'Full' : 'Book'}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                {showAvailableSlots && slots.length === 0 && (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No slots available at the moment
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -297,6 +371,13 @@ const CitizenDashboard = ({ onLogout }: CitizenDashboardProps) => {
           </div>
         </div>
       </div>
+
+      <BookingSlotDialog
+        slot={selectedSlot}
+        open={bookingDialogOpen}
+        onOpenChange={setBookingDialogOpen}
+        onBookingSuccess={handleBookingSuccess}
+      />
     </div>
   );
 };

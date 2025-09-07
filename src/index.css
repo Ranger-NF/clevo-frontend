@@ -15,17 +15,17 @@
     --popover: 0 0% 100%;
     --popover-foreground: 210 11% 15%;
 
-    --primary: 142 84% 24%;
+    --primary: 142 54% 13%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 210 11% 15%;
+    --secondary: 68 86% 69%;
+    --secondary-foreground: 142 54% 13%;
 
     --muted: 210 20% 96%;
     --muted-foreground: 210 6% 46%;
 
-    --accent: 142 51% 89%;
-    --accent-foreground: 142 84% 24%;
+    --accent: 68 86% 69%;
+    --accent-foreground: 142 54% 13%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -35,13 +35,13 @@
     --ring: 142 84% 24%;
 
     /* Clevo specific tokens */
-    --eco-primary: 142 84% 24%;
-    --eco-secondary: 120 61% 34%;
-    --eco-light: 142 51% 89%;
-    --eco-accent: 39 84% 56%;
-    --recycler-blue: 217 91% 60%;
-    --authority-purple: 262 71% 50%;
-    --citizen-green: 142 84% 24%;
+    --eco-primary: 142 54% 13%;
+    --eco-secondary: 68 86% 69%;
+    --eco-light: 68 86% 85%;
+    --eco-accent: 68 86% 69%;
+    --recycler-blue: 142 54% 13%;
+    --authority-purple: 142 54% 13%;
+    --citizen-green: 142 54% 13%;
 
     /* Gradients */
     --gradient-eco: linear-gradient(135deg, hsl(var(--eco-primary)), hsl(var(--eco-secondary)));
