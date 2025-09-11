@@ -3,8 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Mail, Lock, User } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User, Phone, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { authService } from '@/services/auth';
 
 interface AuthFormProps {
   userType: 'citizen' | 'recycler' | 'authority';
@@ -15,11 +16,16 @@ interface AuthFormProps {
 const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    address: '',
+    phoneNumber: ''
   });
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   const userTypeConfig = {
@@ -42,28 +48,53 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
 
   const config = userTypeConfig[userType];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    if (!isLogin && formData.password !== formData.confirmPassword) {
+    try {
+      if (!isLogin && formData.password !== formData.confirmPassword) {
+        toast({
+          title: "Password Mismatch",
+          description: "Passwords do not match. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isLogin) {
+        await authService.login({
+          username: formData.username,
+          password: formData.password,
+        });
+      } else {
+        await authService.register({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          role: userType.toUpperCase() as 'CITIZEN' | 'RECYCLER' | 'AUTHORITY',
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          address: formData.address,
+          phoneNumber: formData.phoneNumber,
+        });
+      }
+
       toast({
-        title: "Password Mismatch",
-        description: "Passwords do not match. Please try again.",
+        title: "Success!",
+        description: `${isLogin ? 'Logged in' : 'Registered'} successfully.`,
+      });
+
+      onAuth();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Authentication failed",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    // Show backend integration message
-    toast({
-      title: "Authentication Ready",
-      description: "Connect Supabase integration to enable authentication features.",
-    });
-
-    // For demo purposes, proceed to dashboard
-    setTimeout(() => {
-      onAuth();
-    }, 1500);
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -100,43 +131,110 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
 
           <CardContent className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium">
-                    Full Name
-                  </Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="Enter your full name"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="pl-10"
-                      required={!isLogin}
-                    />
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">
-                  Email Address
+                <Label htmlFor="username" className="text-sm font-medium">
+                  Username
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    id="username"
+                    type="text"
+                    placeholder="Enter your username"
+                    value={formData.username}
+                    onChange={(e) => handleInputChange('username', e.target.value)}
                     className="pl-10"
                     required
                   />
                 </div>
               </div>
+
+              {!isLogin && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName" className="text-sm font-medium">
+                        First Name
+                      </Label>
+                      <Input
+                        id="firstName"
+                        type="text"
+                        placeholder="First name"
+                        value={formData.firstName}
+                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                        required={!isLogin}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName" className="text-sm font-medium">
+                        Last Name
+                      </Label>
+                      <Input
+                        id="lastName"
+                        type="text"
+                        placeholder="Last name"
+                        value={formData.lastName}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        required={!isLogin}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium">
+                      Email Address
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className="pl-10"
+                        required={!isLogin}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber" className="text-sm font-medium">
+                      Phone Number
+                    </Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input
+                        id="phoneNumber"
+                        type="tel"
+                        placeholder="Enter your phone number"
+                        value={formData.phoneNumber}
+                        onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                        className="pl-10"
+                        required={!isLogin}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address" className="text-sm font-medium">
+                      Address
+                    </Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input
+                        id="address"
+                        type="text"
+                        placeholder="Enter your address"
+                        value={formData.address}
+                        onChange={(e) => handleInputChange('address', e.target.value)}
+                        className="pl-10"
+                        required={!isLogin}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium">
@@ -178,10 +276,11 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-eco-primary to-eco-secondary text-white hover:scale-105 transition-all duration-300 py-3"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-eco-primary to-eco-secondary text-white hover:scale-105 transition-all duration-300 py-3 font-montserrat"
                 size="lg"
               >
-                {isLogin ? 'Sign In' : 'Create Account'}
+                {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
               </Button>
             </form>
 
