@@ -1,13 +1,13 @@
-import { authService } from './auth';
+import { authService } from "./auth";
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = "http://localhost:8080/api";
 
 // Types based on the OpenAPI schema
 export interface User {
   id: string;
   username: string;
   email: string;
-  role: 'CITIZEN' | 'RECYCLER' | 'AUTHORITY';
+  role: "CITIZEN" | "RECYCLER" | "AUTHORITY";
   firstName: string;
   lastName: string;
   address: string;
@@ -30,7 +30,6 @@ export interface WasteCategory {
 }
 
 export interface PickupSlotRequest {
-  recyclerId: string;
   wardId: string;
   startTime: string;
   endTime: string;
@@ -58,7 +57,7 @@ export interface Booking {
   wasteCategory: WasteCategory;
   estimatedQuantity: number;
   actualQuantity: number;
-  status: 'PENDING' | 'CONFIRMED' | 'COLLECTED' | 'CANCELLED';
+  status: "PENDING" | "CONFIRMED" | "COLLECTED" | "CANCELLED";
   confirmationCode: string;
   createdAt: string;
   updatedAt: string;
@@ -96,60 +95,99 @@ export interface WardRequest {
 
 // Recycler API
 export const recyclerApi = {
-  getRecyclerSlots: async (recyclerId: string): Promise<PickupSlot[]> => {
-    const response = await fetch(`${API_BASE_URL}/recycler/slots/${recyclerId}`, {
+  getRecyclerSlots: async (): Promise<PickupSlot[]> => {
+    const response = await fetch(`${API_BASE_URL}/recycler/slots`, {
       headers: authService.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch recycler slots');
+    if (!response.ok) throw new Error("Failed to fetch recycler slots");
     return response.json();
   },
 
   createSlot: async (slot: PickupSlotRequest): Promise<PickupSlot> => {
     const response = await fetch(`${API_BASE_URL}/recycler/slots`, {
-      method: 'POST',
+      method: "POST",
       headers: authService.getAuthHeaders(),
       body: JSON.stringify(slot),
     });
-    if (!response.ok) throw new Error('Failed to create slot');
+    if (!response.ok) throw new Error("Failed to create slot");
     return response.json();
   },
 
-  updateSlot: async (id: string, slot: PickupSlotRequest): Promise<PickupSlot> => {
+  updateSlot: async (
+    id: string,
+    slot: PickupSlotRequest,
+  ): Promise<PickupSlot> => {
     const response = await fetch(`${API_BASE_URL}/recycler/slots/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       headers: authService.getAuthHeaders(),
       body: JSON.stringify(slot),
     });
-    if (!response.ok) throw new Error('Failed to update slot');
+    if (!response.ok) throw new Error("Failed to update slot");
     return response.json();
   },
 
   deleteSlot: async (id: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/recycler/slots/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: authService.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to delete slot');
+    if (!response.ok) throw new Error("Failed to delete slot");
+  },
+
+  getAllBookings: async (): Promise<Booking[]> => {
+    const response = await fetch(`${API_BASE_URL}/recycler/bookings`, {
+      headers: authService.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error("Failed to fetch bookings");
+    return response.json();
+  },
+
+  getBookingsBySlot: async (slotId: string): Promise<Booking[]> => {
+    const response = await fetch(
+      `${API_BASE_URL}/recycler/bookings/slot/${slotId}`,
+      {
+        headers: authService.getAuthHeaders(),
+      },
+    );
+    if (!response.ok) throw new Error("Failed to fetch bookings");
+    return response.json();
   },
 
   getBookingsByWard: async (wardId: string): Promise<Booking[]> => {
-    const response = await fetch(`${API_BASE_URL}/recycler/bookings/ward/${wardId}`, {
+    const response = await fetch(
+      `${API_BASE_URL}/recycler/bookings/ward/${wardId}`,
+      {
+        headers: authService.getAuthHeaders(),
+      },
+    );
+    if (!response.ok) throw new Error("Failed to fetch bookings");
+    return response.json();
+  },
+
+  listWards: async (): Promise<Ward[]> => {
+    const response = await fetch(`${API_BASE_URL}/recycler/wards`, {
       headers: authService.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch bookings');
+    if (!response.ok) throw new Error("Failed to fetch wards");
     return response.json();
   },
 };
 
 // Booking API
 export const bookingApi = {
-  updateBookingStatus: async (bookingId: string, statusRequest: UpdateBookingStatusRequest): Promise<string> => {
-    const response = await fetch(`${API_BASE_URL}/recycler/bookings/${bookingId}/status`, {
-      method: 'PUT',
-      headers: authService.getAuthHeaders(),
-      body: JSON.stringify(statusRequest),
-    });
-    if (!response.ok) throw new Error('Failed to update booking status');
+  updateBookingStatus: async (
+    bookingId: string,
+    statusRequest: UpdateBookingStatusRequest,
+  ): Promise<string> => {
+    const response = await fetch(
+      `${API_BASE_URL}/recycler/bookings/${bookingId}/status`,
+      {
+        method: "PUT",
+        headers: authService.getAuthHeaders(),
+        body: JSON.stringify(statusRequest),
+      },
+    );
+    if (!response.ok) throw new Error("Failed to update booking status");
     return response.text();
   },
 };
@@ -160,7 +198,7 @@ export const citizenApi = {
     const response = await fetch(`${API_BASE_URL}/citizen/slots`, {
       headers: authService.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch slots');
+    if (!response.ok) throw new Error("Failed to fetch slots");
     return response.json();
   },
 
@@ -168,17 +206,17 @@ export const citizenApi = {
     const response = await fetch(`${API_BASE_URL}/citizen/bookings`, {
       headers: authService.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch bookings');
+    if (!response.ok) throw new Error("Failed to fetch bookings");
     return response.json();
   },
 
   bookSlot: async (booking: BookingRequest): Promise<Booking> => {
     const response = await fetch(`${API_BASE_URL}/citizen/book`, {
-      method: 'POST',
+      method: "POST",
       headers: authService.getAuthHeaders(),
       body: JSON.stringify(booking),
     });
-    if (!response.ok) throw new Error('Failed to book slot');
+    if (!response.ok) throw new Error("Failed to book slot");
     return response.json();
   },
 
@@ -186,7 +224,7 @@ export const citizenApi = {
     const response = await fetch(`${API_BASE_URL}/citizen/rewards/total`, {
       headers: authService.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch total rewards');
+    if (!response.ok) throw new Error("Failed to fetch total rewards");
     return response.json();
   },
 
@@ -194,18 +232,26 @@ export const citizenApi = {
     const response = await fetch(`${API_BASE_URL}/citizen/rewards/available`, {
       headers: authService.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch available rewards');
+    if (!response.ok) throw new Error("Failed to fetch available rewards");
     return response.json();
   },
 
   redeemReward: async (request: RewardRedeemRequest): Promise<string> => {
     const response = await fetch(`${API_BASE_URL}/citizen/rewards/redeem`, {
-      method: 'POST',
+      method: "POST",
       headers: authService.getAuthHeaders(),
       body: JSON.stringify(request),
     });
-    if (!response.ok) throw new Error('Failed to redeem reward');
+    if (!response.ok) throw new Error("Failed to redeem reward");
     return response.text();
+  },
+
+  listWasteCategories: async (): Promise<WasteCategory[]> => {
+    const response = await fetch(`${API_BASE_URL}/citizen/waste-categories`, {
+      headers: authService.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error("Failed to fetch waste categories");
+    return response.json();
   },
 };
 
@@ -215,7 +261,7 @@ export const userApi = {
     const response = await fetch(`${API_BASE_URL}/users/${id}`, {
       headers: authService.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch user');
+    if (!response.ok) throw new Error("Failed to fetch user");
     return response.json();
   },
 
@@ -223,9 +269,9 @@ export const userApi = {
     const response = await fetch(`${API_BASE_URL}/authority/users`, {
       headers: authService.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch users');
+    if (!response.ok) throw new Error("Failed to fetch users");
     const users = await response.json();
-    return users.filter((user: User) => user.role === 'RECYCLER');
+    return users.filter((user: User) => user.role === "RECYCLER");
   },
 };
 
@@ -235,25 +281,31 @@ export const authorityApi = {
     const response = await fetch(`${API_BASE_URL}/authority/users`, {
       headers: authService.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch users');
+    if (!response.ok) throw new Error("Failed to fetch users");
     return response.json();
   },
 
   activateUser: async (id: string): Promise<User> => {
-    const response = await fetch(`${API_BASE_URL}/authority/users/${id}/activate`, {
-      method: 'PUT',
-      headers: authService.getAuthHeaders(),
-    });
-    if (!response.ok) throw new Error('Failed to activate user');
+    const response = await fetch(
+      `${API_BASE_URL}/authority/users/${id}/activate`,
+      {
+        method: "PUT",
+        headers: authService.getAuthHeaders(),
+      },
+    );
+    if (!response.ok) throw new Error("Failed to activate user");
     return response.json();
   },
 
   deactivateUser: async (id: string): Promise<User> => {
-    const response = await fetch(`${API_BASE_URL}/authority/users/${id}/deactivate`, {
-      method: 'PUT',
-      headers: authService.getAuthHeaders(),
-    });
-    if (!response.ok) throw new Error('Failed to deactivate user');
+    const response = await fetch(
+      `${API_BASE_URL}/authority/users/${id}/deactivate`,
+      {
+        method: "PUT",
+        headers: authService.getAuthHeaders(),
+      },
+    );
+    if (!response.ok) throw new Error("Failed to deactivate user");
     return response.json();
   },
 
@@ -261,17 +313,17 @@ export const authorityApi = {
     const response = await fetch(`${API_BASE_URL}/authority/wards`, {
       headers: authService.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch wards');
+    if (!response.ok) throw new Error("Failed to fetch wards");
     return response.json();
   },
 
   addWard: async (ward: WardRequest): Promise<Ward> => {
     const response = await fetch(`${API_BASE_URL}/authority/wards`, {
-      method: 'POST',
+      method: "POST",
       headers: authService.getAuthHeaders(),
       body: JSON.stringify(ward),
     });
-    if (!response.ok) throw new Error('Failed to add ward');
+    if (!response.ok) throw new Error("Failed to add ward");
     return response.json();
   },
 
@@ -279,50 +331,65 @@ export const authorityApi = {
     const response = await fetch(`${API_BASE_URL}/authority/waste-categories`, {
       headers: authService.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch waste categories');
+    if (!response.ok) throw new Error("Failed to fetch waste categories");
     return response.json();
   },
 
-  addWasteCategory: async (category: WasteCategoryRequest): Promise<WasteCategory> => {
+  addWasteCategory: async (
+    category: WasteCategoryRequest,
+  ): Promise<WasteCategory> => {
     const response = await fetch(`${API_BASE_URL}/authority/waste-categories`, {
-      method: 'POST',
+      method: "POST",
       headers: authService.getAuthHeaders(),
       body: JSON.stringify(category),
     });
-    if (!response.ok) throw new Error('Failed to add waste category');
+    if (!response.ok) throw new Error("Failed to add waste category");
     return response.json();
   },
 
   // Dashboard APIs
   getWasteTrend: async (): Promise<any> => {
-    const response = await fetch(`${API_BASE_URL}/authority/dashboard/waste-trend`, {
-      headers: authService.getAuthHeaders(),
-    });
-    if (!response.ok) throw new Error('Failed to fetch waste trend');
+    const response = await fetch(
+      `${API_BASE_URL}/authority/dashboard/waste-trend`,
+      {
+        headers: authService.getAuthHeaders(),
+      },
+    );
+    if (!response.ok) throw new Error("Failed to fetch waste trend");
     return response.json();
   },
 
   getWasteByType: async (): Promise<any> => {
-    const response = await fetch(`${API_BASE_URL}/authority/dashboard/waste-by-type`, {
-      headers: authService.getAuthHeaders(),
-    });
-    if (!response.ok) throw new Error('Failed to fetch waste by type');
+    const response = await fetch(
+      `${API_BASE_URL}/authority/dashboard/waste-by-type`,
+      {
+        headers: authService.getAuthHeaders(),
+      },
+    );
+    if (!response.ok) throw new Error("Failed to fetch waste by type");
     return response.json();
   },
 
   getWasteByRegion: async (): Promise<any> => {
-    const response = await fetch(`${API_BASE_URL}/authority/dashboard/waste-by-region`, {
-      headers: authService.getAuthHeaders(),
-    });
-    if (!response.ok) throw new Error('Failed to fetch waste by region');
+    const response = await fetch(
+      `${API_BASE_URL}/authority/dashboard/waste-by-region`,
+      {
+        headers: authService.getAuthHeaders(),
+      },
+    );
+    if (!response.ok) throw new Error("Failed to fetch waste by region");
     return response.json();
   },
 
   getEcoPointsDistribution: async (): Promise<any> => {
-    const response = await fetch(`${API_BASE_URL}/authority/dashboard/eco-points-distribution`, {
-      headers: authService.getAuthHeaders(),
-    });
-    if (!response.ok) throw new Error('Failed to fetch eco points distribution');
+    const response = await fetch(
+      `${API_BASE_URL}/authority/dashboard/eco-points-distribution`,
+      {
+        headers: authService.getAuthHeaders(),
+      },
+    );
+    if (!response.ok)
+      throw new Error("Failed to fetch eco points distribution");
     return response.json();
   },
 };

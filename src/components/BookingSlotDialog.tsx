@@ -1,12 +1,24 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { PickupSlot, WasteCategory, BookingRequest } from '@/services/api';
-import { citizenApi, authorityApi } from '@/services/api';
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { PickupSlot, WasteCategory, BookingRequest } from "@/services/api";
+import { citizenApi } from "@/services/api";
 
 interface BookingSlotDialogProps {
   slot: PickupSlot | null;
@@ -15,10 +27,15 @@ interface BookingSlotDialogProps {
   onBookingSuccess: () => void;
 }
 
-const BookingSlotDialog = ({ slot, open, onOpenChange, onBookingSuccess }: BookingSlotDialogProps) => {
+const BookingSlotDialog = ({
+  slot,
+  open,
+  onOpenChange,
+  onBookingSuccess,
+}: BookingSlotDialogProps) => {
   const [wasteCategories, setWasteCategories] = useState<WasteCategory[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
-  const [estimatedQuantity, setEstimatedQuantity] = useState<string>('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [estimatedQuantity, setEstimatedQuantity] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -30,7 +47,7 @@ const BookingSlotDialog = ({ slot, open, onOpenChange, onBookingSuccess }: Booki
 
   const loadWasteCategories = async () => {
     try {
-      const categories = await authorityApi.listWasteCategories();
+      const categories = await citizenApi.listWasteCategories();
       setWasteCategories(categories);
     } catch (error) {
       toast({
@@ -54,20 +71,22 @@ const BookingSlotDialog = ({ slot, open, onOpenChange, onBookingSuccess }: Booki
       };
 
       await citizenApi.bookSlot(booking);
-      
+
       toast({
         title: "Success!",
-        description: "Slot booked successfully. You will receive a confirmation code.",
+        description:
+          "Slot booked successfully. You will receive a confirmation code.",
       });
 
       onBookingSuccess();
       onOpenChange(false);
-      setSelectedCategoryId('');
-      setEstimatedQuantity('');
+      setSelectedCategoryId("");
+      setEstimatedQuantity("");
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to book slot",
+        description:
+          error instanceof Error ? error.message : "Failed to book slot",
         variant: "destructive",
       });
     } finally {
@@ -77,16 +96,23 @@ const BookingSlotDialog = ({ slot, open, onOpenChange, onBookingSuccess }: Booki
 
   if (!slot) return null;
 
-  const selectedCategory = wasteCategories.find(cat => cat.id === selectedCategoryId);
-  const totalPoints = selectedCategory ? selectedCategory.ecoPointsPerUnit * parseFloat(estimatedQuantity || '0') : 0;
+  const selectedCategory = wasteCategories.find(
+    (cat) => cat.id === selectedCategoryId,
+  );
+  const totalPoints = selectedCategory
+    ? selectedCategory.ecoPointsPerUnit * parseFloat(estimatedQuantity || "0")
+    : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="font-montserrat">Book Pickup Slot</DialogTitle>
+          <DialogTitle className="font-montserrat">
+            Book Pickup Slot
+          </DialogTitle>
           <DialogDescription>
-            Book your slot with {slot.recycler.firstName} {slot.recycler.lastName} in {slot.ward.name}
+            Book your slot with {slot.recycler.firstName}{" "}
+            {slot.recycler.lastName} in {slot.ward.name}
           </DialogDescription>
         </DialogHeader>
 
@@ -95,24 +121,33 @@ const BookingSlotDialog = ({ slot, open, onOpenChange, onBookingSuccess }: Booki
             <div>
               <p className="text-sm text-muted-foreground">Date & Time</p>
               <p className="font-medium">
-                {new Date(slot.startTime).toLocaleDateString()} at{' '}
-                {new Date(slot.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {new Date(slot.startTime).toLocaleDateString()} at{" "}
+                {new Date(slot.startTime).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Available Spots</p>
-              <p className="font-medium">{slot.capacity - slot.currentBookingsCount} left</p>
+              <p className="font-medium">
+                {slot.capacity - slot.currentBookingsCount} left
+              </p>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="wasteCategory">Waste Category</Label>
-              <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId} required>
+              <Select
+                value={selectedCategoryId}
+                onValueChange={setSelectedCategoryId}
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select waste category" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border border-border">
                   {wasteCategories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name} ({category.ecoPointsPerUnit} points/kg)
@@ -158,7 +193,7 @@ const BookingSlotDialog = ({ slot, open, onOpenChange, onBookingSuccess }: Booki
                 disabled={loading || !selectedCategoryId || !estimatedQuantity}
                 className="flex-1 bg-eco-primary hover:bg-eco-primary/90 font-montserrat"
               >
-                {loading ? 'Booking...' : 'Book Slot'}
+                {loading ? "Booking..." : "Book Slot"}
               </Button>
             </div>
           </form>

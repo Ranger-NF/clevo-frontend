@@ -54,14 +54,14 @@ const UserTypeSelection = ({ onUserTypeSelect }: UserTypeSelectionProps) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-eco-light/5 to-secondary/30 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-[var(--accent-color)] flex items-center justify-center p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-foreground mb-4">
+          <h2 className="text-4xl font-bold text-white mb-4">
             Choose Your Role
           </h2>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-xl text-white">
             Select how you'd like to participate in our eco-friendly platform
           </p>
         </div>
@@ -81,7 +81,7 @@ const UserTypeSelection = ({ onUserTypeSelect }: UserTypeSelectionProps) => {
                 <div className="space-y-6">
                   {/* Icon */}
                   <div
-                    className={`w-16 h-16 mx-auto rounded-full bg-white shadow-lg flex items-center justify-center ${userType.iconColor}`}
+                    className={`w-16 h-16 mx-auto rounded-full bg-accent shadow-lg flex items-center justify-center ${userType.iconColor}`}
                   >
                     <Icon size={32} />
                   </div>

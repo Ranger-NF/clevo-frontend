@@ -1,12 +1,31 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
-import { recyclerApi, authorityApi, userApi, type PickupSlotRequest, type Ward, type User } from '@/services/api';
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import {
+  recyclerApi,
+  authorityApi,
+  userApi,
+  type PickupSlotRequest,
+  type Ward,
+  type User,
+} from "@/services/api";
 
 interface SlotFormProps {
   open: boolean;
@@ -19,10 +38,9 @@ const SlotForm = ({ open, onOpenChange, onSuccess }: SlotFormProps) => {
   const [wards, setWards] = useState<Ward[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<PickupSlotRequest>({
-    recyclerId: '',
-    wardId: '',
-    startTime: '',
-    endTime: '',
+    wardId: "",
+    startTime: "",
+    endTime: "",
     capacity: 10,
     isActive: true,
   });
@@ -36,11 +54,7 @@ const SlotForm = ({ open, onOpenChange, onSuccess }: SlotFormProps) => {
 
   const loadOptions = async () => {
     try {
-      const [recyclersData, wardsData] = await Promise.all([
-        userApi.getRecyclers(),
-        authorityApi.listWards(),
-      ]);
-      setRecyclers(recyclersData);
+      const [wardsData] = await Promise.all([recyclerApi.listWards()]);
       setWards(wardsData);
     } catch (error) {
       toast({
@@ -53,7 +67,7 @@ const SlotForm = ({ open, onOpenChange, onSuccess }: SlotFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.recyclerId || !formData.wardId || !formData.startTime || !formData.endTime) {
+    if (!formData.wardId || !formData.startTime || !formData.endTime) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -65,7 +79,7 @@ const SlotForm = ({ open, onOpenChange, onSuccess }: SlotFormProps) => {
     setLoading(true);
     try {
       await recyclerApi.createSlot(formData);
-      
+
       toast({
         title: "Success!",
         description: "Pickup slot created successfully",
@@ -74,17 +88,17 @@ const SlotForm = ({ open, onOpenChange, onSuccess }: SlotFormProps) => {
       onSuccess();
       onOpenChange(false);
       setFormData({
-        recyclerId: '',
-        wardId: '',
-        startTime: '',
-        endTime: '',
+        wardId: "",
+        startTime: "",
+        endTime: "",
         capacity: 10,
         isActive: true,
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create slot",
+        description:
+          error instanceof Error ? error.message : "Failed to create slot",
         variant: "destructive",
       });
     } finally {
@@ -96,7 +110,9 @@ const SlotForm = ({ open, onOpenChange, onSuccess }: SlotFormProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="font-montserrat text-primary">Create Pickup Slot</DialogTitle>
+          <DialogTitle className="font-montserrat text-primary">
+            Create Pickup Slot
+          </DialogTitle>
           <DialogDescription>
             Create a new pickup slot for waste collection
           </DialogDescription>
@@ -104,24 +120,14 @@ const SlotForm = ({ open, onOpenChange, onSuccess }: SlotFormProps) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="recycler">Recycler</Label>
-            <Select value={formData.recyclerId} onValueChange={(value) => setFormData({...formData, recyclerId: value})} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select recycler" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border border-border">
-                {recyclers.map((recycler) => (
-                  <SelectItem key={recycler.id} value={recycler.id}>
-                    {recycler.firstName} {recycler.lastName} - {recycler.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="ward">Ward</Label>
-            <Select value={formData.wardId} onValueChange={(value) => setFormData({...formData, wardId: value})} required>
+            <Select
+              value={formData.wardId}
+              onValueChange={(value) =>
+                setFormData({ ...formData, wardId: value })
+              }
+              required
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select ward" />
               </SelectTrigger>
@@ -142,7 +148,9 @@ const SlotForm = ({ open, onOpenChange, onSuccess }: SlotFormProps) => {
                 id="startTime"
                 type="datetime-local"
                 value={formData.startTime}
-                onChange={(e) => setFormData({...formData, startTime: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, startTime: e.target.value })
+                }
                 required
               />
             </div>
@@ -152,7 +160,9 @@ const SlotForm = ({ open, onOpenChange, onSuccess }: SlotFormProps) => {
                 id="endTime"
                 type="datetime-local"
                 value={formData.endTime}
-                onChange={(e) => setFormData({...formData, endTime: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, endTime: e.target.value })
+                }
                 required
               />
             </div>
@@ -166,7 +176,9 @@ const SlotForm = ({ open, onOpenChange, onSuccess }: SlotFormProps) => {
               min="1"
               max="50"
               value={formData.capacity}
-              onChange={(e) => setFormData({...formData, capacity: parseInt(e.target.value)})}
+              onChange={(e) =>
+                setFormData({ ...formData, capacity: parseInt(e.target.value) })
+              }
               required
             />
           </div>
@@ -175,7 +187,9 @@ const SlotForm = ({ open, onOpenChange, onSuccess }: SlotFormProps) => {
             <Switch
               id="isActive"
               checked={formData.isActive}
-              onCheckedChange={(checked) => setFormData({...formData, isActive: checked})}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, isActive: checked })
+              }
             />
             <Label htmlFor="isActive">Active</Label>
           </div>
@@ -194,7 +208,7 @@ const SlotForm = ({ open, onOpenChange, onSuccess }: SlotFormProps) => {
               disabled={loading}
               className="flex-1 bg-primary hover:bg-primary/90 font-montserrat"
             >
-              {loading ? 'Creating...' : 'Create Slot'}
+              {loading ? "Creating..." : "Create Slot"}
             </Button>
           </div>
         </form>

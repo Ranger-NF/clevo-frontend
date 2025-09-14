@@ -1,16 +1,28 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Mail, Lock, User, Phone, MapPin } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { authService } from '@/services/auth';
-import { authorityApi } from '@/services/api';
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, Mail, Lock, User, Phone, MapPin } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { authService } from "@/services/auth";
+import { authorityApi } from "@/services/api";
 
 interface AuthFormProps {
-  userType: 'citizen' | 'recycler' | 'authority';
+  userType: "citizen" | "recycler" | "authority";
   onBack: () => void;
   onAuth: () => void;
 }
@@ -18,22 +30,24 @@ interface AuthFormProps {
 const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
-    username: '',
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    address: '',
-    phoneNumber: '',
-    wardId: ''
+    username: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    address: "",
+    phoneNumber: "",
+    wardId: "",
   });
-  const [wards, setWards] = useState<Array<{id: string; name: string; description: string}>>([]);
+  const [wards, setWards] = useState<
+    Array<{ id: string; name: string; description: string }>
+  >([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (userType === 'citizen' && !isLogin) {
+    if (userType === "citizen" && !isLogin) {
       loadWards();
     }
   }, [userType, isLogin]);
@@ -49,20 +63,20 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
 
   const userTypeConfig = {
     citizen: {
-      title: 'Citizen Portal',
-      color: 'primary',
-      description: 'Access your eco-friendly waste management dashboard'
+      title: "Citizen Portal",
+      color: "primary",
+      description: "Access your eco-friendly waste management dashboard",
     },
     recycler: {
-      title: 'Recycler Dashboard', 
-      color: 'primary',
-      description: 'Manage pickup slots and coordinate waste collection'
+      title: "Recycler Dashboard",
+      color: "primary",
+      description: "Manage pickup slots and coordinate waste collection",
     },
     authority: {
-      title: 'Authority Panel',
-      color: 'primary',
-      description: 'Monitor and analyze waste management operations'
-    }
+      title: "Authority Panel",
+      color: "primary",
+      description: "Monitor and analyze waste management operations",
+    },
   };
 
   const config = userTypeConfig[userType];
@@ -70,7 +84,7 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       if (!isLogin && formData.password !== formData.confirmPassword) {
         toast({
@@ -91,7 +105,7 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
           username: formData.username,
           email: formData.email,
           password: formData.password,
-          role: userType.toUpperCase() as 'CITIZEN' | 'RECYCLER' | 'AUTHORITY',
+          role: userType.toUpperCase() as "CITIZEN" | "RECYCLER" | "AUTHORITY",
           firstName: formData.firstName,
           lastName: formData.lastName,
           address: formData.address,
@@ -99,7 +113,7 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
         };
 
         // Add wardId only for citizens
-        if (userType === 'citizen' && formData.wardId) {
+        if (userType === "citizen" && formData.wardId) {
           registerData.wardId = formData.wardId;
         }
 
@@ -108,14 +122,15 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
 
       toast({
         title: "Success!",
-        description: `${isLogin ? 'Logged in' : 'Registered'} successfully.`,
+        description: `${isLogin ? "Logged in" : "Registered"} successfully.`,
       });
 
       onAuth();
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Authentication failed",
+        description:
+          error instanceof Error ? error.message : "Authentication failed",
         variant: "destructive",
       });
     } finally {
@@ -124,7 +139,7 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -134,7 +149,7 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
         <Button
           variant="ghost"
           onClick={onBack}
-          className="mb-6 text-accent hover:text-accent/80"
+          className="mb-6 text-white hover:text-white/80"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Selection
@@ -168,7 +183,9 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                     type="text"
                     placeholder="Enter your username"
                     value={formData.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("username", e.target.value)
+                    }
                     className="pl-10"
                     required
                   />
@@ -179,7 +196,10 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName" className="text-sm font-medium">
+                      <Label
+                        htmlFor="firstName"
+                        className="text-sm font-medium"
+                      >
                         First Name
                       </Label>
                       <Input
@@ -187,7 +207,9 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                         type="text"
                         placeholder="First name"
                         value={formData.firstName}
-                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("firstName", e.target.value)
+                        }
                         required={!isLogin}
                       />
                     </div>
@@ -200,7 +222,9 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                         type="text"
                         placeholder="Last name"
                         value={formData.lastName}
-                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("lastName", e.target.value)
+                        }
                         required={!isLogin}
                       />
                     </div>
@@ -217,7 +241,9 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                         type="email"
                         placeholder="Enter your email"
                         value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("email", e.target.value)
+                        }
                         className="pl-10"
                         required={!isLogin}
                       />
@@ -225,7 +251,10 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phoneNumber" className="text-sm font-medium">
+                    <Label
+                      htmlFor="phoneNumber"
+                      className="text-sm font-medium"
+                    >
                       Phone Number
                     </Label>
                     <div className="relative">
@@ -235,7 +264,9 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                         type="tel"
                         placeholder="Enter your phone number"
                         value={formData.phoneNumber}
-                        onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("phoneNumber", e.target.value)
+                        }
                         className="pl-10"
                         required={!isLogin}
                       />
@@ -253,7 +284,9 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                         type="text"
                         placeholder="Enter your address"
                         value={formData.address}
-                        onChange={(e) => handleInputChange('address', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("address", e.target.value)
+                        }
                         className="pl-10"
                         required={!isLogin}
                       />
@@ -261,12 +294,17 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                   </div>
 
                   {/* Ward selection only for citizens */}
-                  {userType === 'citizen' && (
+                  {userType === "citizen" && (
                     <div className="space-y-2">
                       <Label htmlFor="ward" className="text-sm font-medium">
                         Ward
                       </Label>
-                      <Select value={formData.wardId} onValueChange={(value) => handleInputChange('wardId', value)}>
+                      <Select
+                        value={formData.wardId}
+                        onValueChange={(value) =>
+                          handleInputChange("wardId", value)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select your ward" />
                         </SelectTrigger>
@@ -294,7 +332,9 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                     type="password"
                     placeholder="Enter your password"
                     value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("password", e.target.value)
+                    }
                     className="pl-10"
                     required
                   />
@@ -303,7 +343,10 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
 
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-sm font-medium">
+                  <Label
+                    htmlFor="confirmPassword"
+                    className="text-sm font-medium"
+                  >
                     Confirm Password
                   </Label>
                   <div className="relative">
@@ -313,7 +356,9 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                       type="password"
                       placeholder="Confirm your password"
                       value={formData.confirmPassword}
-                      onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("confirmPassword", e.target.value)
+                      }
                       className="pl-10"
                       required={!isLogin}
                     />
@@ -324,10 +369,14 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-accent hover:bg-accent/90 text-primary font-montserrat py-3 transition-all duration-300 hover:scale-105"
+                className="w-full bg-[var(--accent-color)] hover:bg-[var(--accent-color)]/90 text-white font-montserrat py-3 transition-all duration-300 hover:scale-105"
                 size="lg"
               >
-                {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
+                {loading
+                  ? "Processing..."
+                  : isLogin
+                    ? "Sign In"
+                    : "Create Account"}
               </Button>
             </form>
 
@@ -337,7 +386,9 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                 onClick={() => setIsLogin(!isLogin)}
                 className="text-muted-foreground hover:text-foreground"
               >
-                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+                {isLogin
+                  ? "Don't have an account? Sign up"
+                  : "Already have an account? Sign in"}
               </Button>
             </div>
           </CardContent>
