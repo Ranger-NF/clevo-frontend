@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Mail, Lock, User, Phone, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { authService } from "@/services/auth";
-import { authorityApi } from "@/services/api";
+import { authService, RegisterRequest } from "@/services/auth";
+import { baseApi, Ward } from "@/services/api";
 
 interface AuthFormProps {
   userType: "citizen" | "recycler" | "authority";
@@ -40,9 +40,7 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
     phoneNumber: "",
     wardId: "",
   });
-  const [wards, setWards] = useState<
-    Array<{ id: string; name: string; description: string }>
-  >([]);
+  const [wards, setWards] = useState<Ward[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -54,10 +52,10 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
 
   const loadWards = async () => {
     try {
-      const wardsData = await authorityApi.listWards();
+      const wardsData = await baseApi.getAllWards();
       setWards(wardsData);
     } catch (error) {
-      // Silently fail - wards loading is not critical for auth
+      console.warn("Failed to load wards:", error);
     }
   };
 
@@ -81,56 +79,145 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
 
   const config = userTypeConfig[userType];
 
+  // Validation helper
+  const validateForm = (): string | null => {
+    if (!formData.username.trim()) return "Username is required";
+    if (!formData.password.trim()) return "Password is required";
+
+    if (!isLogin) {
+      if (!formData.firstName.trim()) return "First name is required";
+      if (!formData.lastName.trim()) return "Last name is required";
+      if (!formData.email.trim()) return "Email is required";
+      if (!formData.phoneNumber.trim()) return "Phone number is required";
+      if (!formData.address.trim()) return "Address is required";
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email))
+        return "Please enter a valid email address";
+
+      // Password confirmation
+      if (formData.password !== formData.confirmPassword) {
+        return "Passwords do not match";
+      }
+
+      // Ward validation for citizens
+      if (userType === "citizen" && !formData.wardId) {
+        return "Please select a ward";
+      }
+    }
+
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      if (!isLogin && formData.password !== formData.confirmPassword) {
+      // Validate form
+      const validationError = validateForm();
+      if (validationError) {
         toast({
-          title: "Password Mismatch",
-          description: "Passwords do not match. Please try again.",
+          title: "Validation Error",
+          description: validationError,
           variant: "destructive",
         });
         return;
       }
 
       if (isLogin) {
-        await authService.login({
+        console.log("Login attempt with:", {
           username: formData.username,
+          password: "[HIDDEN]",
+        });
+
+        await authService.login({
+          username: formData.username.trim(),
           password: formData.password,
         });
-      } else {
-        const registerData: any = {
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-          role: userType.toUpperCase() as "CITIZEN" | "RECYCLER" | "AUTHORITY",
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          address: formData.address,
-          phoneNumber: formData.phoneNumber,
-        };
 
-        // Add wardId only for citizens
-        if (userType === "citizen" && formData.wardId) {
-          registerData.wardId = formData.wardId;
+        toast({
+          title: "Success!",
+          description: "Logged in successfully.",
+        });
+
+        onAuth();
+      } else {
+        let registerData: RegisterRequest;
+
+        if (userType === "citizen") {
+          registerData = {
+            username: formData.username.trim(),
+            email: formData.email.trim().toLowerCase(),
+            password: formData.password,
+            role: "CITIZEN",
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+            address: formData.address.trim(),
+            phoneNumber: formData.phoneNumber.trim(),
+            wardId: formData.wardId,
+          };
+        } else {
+          registerData = {
+            username: formData.username.trim(),
+            email: formData.email.trim().toLowerCase(),
+            password: formData.password,
+            role: userType.toUpperCase() as "RECYCLER" | "AUTHORITY",
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+            address: formData.address.trim(),
+            phoneNumber: formData.phoneNumber.trim(),
+          };
         }
 
+        // Log the data being sent (remove in production)
+        console.log("Registration attempt with:", {
+          ...registerData,
+          password: "[HIDDEN]",
+        });
+
         await authService.register(registerData);
+
+        toast({
+          title: "Registration Successful!",
+          description:
+            "Your account has been created. Please log in to continue.",
+        });
+
+        // Switch to login form after successful registration
+        setIsLogin(true);
+        // Clear form data except username for convenience
+        setFormData((prev) => ({
+          username: prev.username,
+          firstName: "",
+          lastName: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          address: "",
+          phoneNumber: "",
+          wardId: "",
+        }));
+      }
+    } catch (error) {
+      console.error("Auth error:", error);
+
+      let errorMessage = "Authentication failed";
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      // Handle specific HTTP errors
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        errorMessage =
+          "Network error. Please check your connection and try again.";
       }
 
       toast({
-        title: "Success!",
-        description: `${isLogin ? "Logged in" : "Registered"} successfully.`,
-      });
-
-      onAuth();
-    } catch (error) {
-      toast({
         title: "Error",
-        description:
-          error instanceof Error ? error.message : "Authentication failed",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -297,23 +384,29 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                   {userType === "citizen" && (
                     <div className="space-y-2">
                       <Label htmlFor="ward" className="text-sm font-medium">
-                        Ward
+                        Ward <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        value={formData.wardId}
+                        value={formData.wardId || undefined}
                         onValueChange={(value) =>
-                          handleInputChange("wardId", value)
+                          handleInputChange("wardId", value || "")
                         }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select your ward" />
                         </SelectTrigger>
                         <SelectContent className="bg-background border border-border">
-                          {wards.map((ward) => (
-                            <SelectItem key={ward.id} value={ward.id}>
-                              {ward.name} - {ward.description}
-                            </SelectItem>
-                          ))}
+                          {wards.length === 0 ? (
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                              Loading wards...
+                            </div>
+                          ) : (
+                            wards.map((ward) => (
+                              <SelectItem key={ward.id} value={ward.id}>
+                                {ward.name} - {ward.description}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>

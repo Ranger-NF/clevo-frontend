@@ -93,6 +93,14 @@ export interface WardRequest {
   description: string;
 }
 
+export const baseApi = {
+  getAllWards: async (): Promise<Ward[]> => {
+    const response = await fetch(`${API_BASE_URL}/wards`);
+    if (!response.ok) throw new Error("Failed to fetch wards");
+    return response.json();
+  },
+};
+
 // Recycler API
 export const recyclerApi = {
   getRecyclerSlots: async (): Promise<PickupSlot[]> => {
