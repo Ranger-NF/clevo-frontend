@@ -29,6 +29,15 @@ export interface WasteCategory {
   ecoPointsPerUnit: number;
 }
 
+export interface PickupSlotRequest {
+  recyclerId: string;
+  wardId: string;
+  startTime: string;
+  endTime: string;
+  capacity: number;
+  isActive: boolean;
+}
+
 export interface PickupSlot {
   id?: string;
   recycler: User;
@@ -95,7 +104,7 @@ export const recyclerApi = {
     return response.json();
   },
 
-  createSlot: async (slot: PickupSlot): Promise<PickupSlot> => {
+  createSlot: async (slot: PickupSlotRequest): Promise<PickupSlot> => {
     const response = await fetch(`${API_BASE_URL}/recycler/slots`, {
       method: 'POST',
       headers: authService.getAuthHeaders(),
@@ -105,7 +114,7 @@ export const recyclerApi = {
     return response.json();
   },
 
-  updateSlot: async (id: string, slot: PickupSlot): Promise<PickupSlot> => {
+  updateSlot: async (id: string, slot: PickupSlotRequest): Promise<PickupSlot> => {
     const response = await fetch(`${API_BASE_URL}/recycler/slots/${id}`, {
       method: 'PUT',
       headers: authService.getAuthHeaders(),
@@ -197,6 +206,26 @@ export const citizenApi = {
     });
     if (!response.ok) throw new Error('Failed to redeem reward');
     return response.text();
+  },
+};
+
+// User API
+export const userApi = {
+  getUser: async (id: string): Promise<User> => {
+    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+      headers: authService.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch user');
+    return response.json();
+  },
+
+  getRecyclers: async (): Promise<User[]> => {
+    const response = await fetch(`${API_BASE_URL}/authority/users`, {
+      headers: authService.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch users');
+    const users = await response.json();
+    return users.filter((user: User) => user.role === 'RECYCLER');
   },
 };
 

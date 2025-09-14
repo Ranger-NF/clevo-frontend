@@ -1,4 +1,4 @@
-import { Calendar, MapPin, Clock, Users, Package, AlertCircle, Loader2 } from 'lucide-react';
+import { Calendar, MapPin, Clock, Users, Package, AlertCircle, Loader2, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/components/ui/use-toast';
 import { useState, useEffect } from 'react';
 import { recyclerApi, bookingApi, type PickupSlot, type Booking } from '@/services/api';
+import SlotForm from '@/components/SlotForm';
 
 interface RecyclerDashboardProps {
   onLogout: () => void;
@@ -19,38 +20,39 @@ const RecyclerDashboard = ({ onLogout }: RecyclerDashboardProps) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSlotForm, setShowSlotForm] = useState(false);
 
   // Mock recycler ID - in real app, this would come from auth context
   const recyclerId = "550e8400-e29b-41d4-a716-446655440000";
   const wardId = "550e8400-e29b-41d4-a716-446655440001";
 
+  const refreshData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [slotsData, bookingsData] = await Promise.all([
+        recyclerApi.getRecyclerSlots(recyclerId),
+        recyclerApi.getBookingsByWard(wardId)
+      ]);
+      
+      setSlots(slotsData);
+      setBookings(bookingsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch data on component mount
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const [slotsData, bookingsData] = await Promise.all([
-          recyclerApi.getRecyclerSlots(recyclerId),
-          recyclerApi.getBookingsByWard(wardId)
-        ]);
-        
-        setSlots(slotsData);
-        setBookings(bookingsData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch data');
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard data",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    refreshData();
   }, [recyclerId, wardId, toast]);
 
   // Helper functions
@@ -114,11 +116,11 @@ const RecyclerDashboard = ({ onLogout }: RecyclerDashboardProps) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-recycler-blue/5 to-secondary/20 p-6">
+      <div className="min-h-screen bg-primary p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-recycler-blue" />
-            <span className="ml-2 text-muted-foreground">Loading dashboard...</span>
+            <Loader2 className="w-8 h-8 animate-spin text-accent" />
+            <span className="ml-2 text-accent/70">Loading dashboard...</span>
           </div>
         </div>
       </div>
@@ -126,15 +128,15 @@ const RecyclerDashboard = ({ onLogout }: RecyclerDashboardProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-recycler-blue/5 to-secondary/20 p-6">
+    <div className="min-h-screen bg-primary p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8 animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Recycler Dashboard</h1>
-            <p className="text-muted-foreground">Manage pickup slots and coordinate collections</p>
+            <h1 className="text-3xl font-bold font-montserrat text-accent">Recycler Dashboard</h1>
+            <p className="text-accent/70">Manage pickup slots and coordinate collections</p>
           </div>
-          <Button onClick={onLogout} variant="outline">
+          <Button onClick={onLogout} variant="outline" className="border-accent text-accent hover:bg-accent hover:text-primary">
             Logout
           </Button>
         </div>
@@ -203,7 +205,11 @@ const RecyclerDashboard = ({ onLogout }: RecyclerDashboardProps) => {
                     </CardTitle>
                     <CardDescription>Manage your scheduled pickup slots</CardDescription>
                   </div>
-                  <Button className="bg-gradient-to-r from-recycler-blue to-blue-600 text-white">
+                  <Button 
+                    className="bg-accent hover:bg-accent/90 text-primary font-montserrat"
+                    onClick={() => setShowSlotForm(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
                     Create New Slot
                   </Button>
                 </div>
@@ -358,6 +364,12 @@ const RecyclerDashboard = ({ onLogout }: RecyclerDashboardProps) => {
           </div>
         </div>
       </div>
+
+      <SlotForm
+        open={showSlotForm}
+        onOpenChange={setShowSlotForm}
+        onSuccess={refreshData}
+      />
     </div>
   );
 };

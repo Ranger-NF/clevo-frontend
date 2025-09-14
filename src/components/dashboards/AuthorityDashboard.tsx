@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { useState, useEffect } from 'react';
 import { authorityApi, type User, type Ward, type WasteCategory } from '@/services/api';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 
 interface AuthorityDashboardProps {
   onLogout: () => void;
@@ -103,268 +104,299 @@ const AuthorityDashboard = ({ onLogout }: AuthorityDashboardProps) => {
     }
   };
 
-  // Calculate statistics
-  const activeUsers = users.filter(u => u.active);
-  const totalEcoPoints = dashboardData.ecoPointsDistribution?.total || 0;
-  const monthlyWaste = dashboardData.wasteTrend?.current || 0;
+  // Chart colors
+  const COLORS = ['#115132', '#CDE253', '#8fbc8f', '#228b22'];
+
+  // Mock chart data (replace with real data from API)
+  const chartData = {
+    wasteByType: [
+      { name: 'Plastic', value: 30, amount: 150 },
+      { name: 'Paper', value: 25, amount: 120 },
+      { name: 'Glass', value: 20, amount: 80 },
+      { name: 'Metal', value: 15, amount: 60 },
+      { name: 'Organic', value: 10, amount: 40 }
+    ],
+    wasteTrend: [
+      { month: 'Jan', collected: 400, recycled: 380 },
+      { month: 'Feb', collected: 450, recycled: 420 },
+      { month: 'Mar', collected: 380, recycled: 360 },
+      { month: 'Apr', collected: 520, recycled: 480 },
+      { month: 'May', collected: 600, recycled: 570 },
+      { month: 'Jun', collected: 650, recycled: 620 }
+    ],
+    wardPerformance: [
+      { ward: 'Central Ward', collections: 45, efficiency: 94 },
+      { ward: 'North Ward', collections: 38, efficiency: 89 },
+      { ward: 'South Ward', collections: 52, efficiency: 96 },
+      { ward: 'East Ward', collections: 41, efficiency: 87 },
+      { ward: 'West Ward', collections: 48, efficiency: 92 }
+    ]
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-authority-purple/5 to-secondary/20 p-6">
+      <div className="min-h-screen bg-primary p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-authority-purple" />
-            <span className="ml-2 text-muted-foreground">Loading dashboard...</span>
+            <Loader2 className="w-8 h-8 animate-spin text-accent" />
+            <span className="ml-2 text-accent/70">Loading dashboard...</span>
           </div>
         </div>
       </div>
     );
   }
 
+  const activeUsers = users.filter(user => user.active);
+  const monthlyWaste = chartData.wasteTrend[chartData.wasteTrend.length - 1]?.collected || 0;
+  const totalEcoPoints = users.reduce((sum, user) => sum + (Math.random() * 1000), 0); // Mock calculation
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-authority-purple/5 to-secondary/20 p-6">
+    <div className="min-h-screen bg-primary p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8 animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Authority Dashboard</h1>
-            <p className="text-muted-foreground">Monitor and analyze waste management operations</p>
+            <h1 className="text-3xl font-bold font-montserrat text-accent">Authority Dashboard</h1>
+            <p className="text-accent/70">Monitor and analyze waste management operations</p>
           </div>
-          <Button onClick={onLogout} variant="outline">
+          <Button onClick={onLogout} variant="outline" className="border-accent text-accent hover:bg-accent hover:text-primary">
             Logout
           </Button>
         </div>
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="dashboard-card animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <Card className="bg-card/90 backdrop-blur-sm border-accent/20">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
+              <CardTitle className="text-sm font-medium text-accent/70">Total Users</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <Users className="text-authority-purple w-5 h-5" />
-                <span className="text-2xl font-bold text-authority-purple">{users.length}</span>
+                <Users className="text-accent w-5 h-5" />
+                <span className="text-2xl font-bold text-accent">{users.length}</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">{activeUsers.length} active users</p>
             </CardContent>
           </Card>
 
-          <Card className="dashboard-card animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <Card className="bg-card/90 backdrop-blur-sm border-accent/20">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active Wards</CardTitle>
+              <CardTitle className="text-sm font-medium text-accent/70">Active Wards</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <MapPin className="text-recycler-blue w-5 h-5" />
-                <span className="text-2xl font-bold">{wards.length}</span>
+                <MapPin className="text-accent w-5 h-5" />
+                <span className="text-2xl font-bold text-accent">{wards.length}</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">All operational</p>
             </CardContent>
           </Card>
 
-          <Card className="dashboard-card animate-slide-up" style={{ animationDelay: '0.3s' }}>
+          <Card className="bg-card/90 backdrop-blur-sm border-accent/20">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Waste</CardTitle>
+              <CardTitle className="text-sm font-medium text-accent/70">Monthly Waste (kg)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <Trash2 className="text-eco-secondary w-5 h-5" />
-                <span className="text-2xl font-bold">{monthlyWaste ? `${monthlyWaste} tons` : 'N/A'}</span>
+                <Trash2 className="text-accent w-5 h-5" />
+                <span className="text-2xl font-bold text-accent">{monthlyWaste}</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">This month</p>
             </CardContent>
           </Card>
 
-          <Card className="dashboard-card animate-slide-up" style={{ animationDelay: '0.4s' }}>
+          <Card className="bg-card/90 backdrop-blur-sm border-accent/20">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Eco-Points Distributed</CardTitle>
+              <CardTitle className="text-sm font-medium text-accent/70">Eco-Points</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <Award className="text-eco-accent w-5 h-5" />
-                <span className="text-2xl font-bold">{totalEcoPoints ? `${(totalEcoPoints / 1000).toFixed(1)}K` : 'N/A'}</span>
+                <Award className="text-accent w-5 h-5" />
+                <span className="text-2xl font-bold text-accent">{Math.round(totalEcoPoints)}</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Total distributed</p>
             </CardContent>
           </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Analytics Section */}
+          {/* Charts Section */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Waste by Category */}
-            <Card className="dashboard-card animate-slide-up" style={{ animationDelay: '0.5s' }}>
+            {/* Waste Distribution Chart */}
+            <Card className="bg-card/90 backdrop-blur-sm border-accent/20">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-authority-purple" />
+                <CardTitle className="flex items-center gap-2 text-accent font-montserrat">
+                  <BarChart3 className="w-5 h-5" />
                   Waste Distribution by Category
                 </CardTitle>
-                <CardDescription>Monthly waste collection breakdown</CardDescription>
+                <CardDescription>Current month breakdown</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {wasteCategories.slice(0, 4).map((category) => (
-                    <div key={category.id} className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>{category.name}</span>
-                        <span className="font-medium">{category.ecoPointsPerUnit} pts/unit</span>
-                      </div>
-                      <div className="w-full bg-secondary rounded-full h-2">
-                        <div 
-                          className="bg-gradient-to-r from-citizen-green to-eco-secondary h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(category.ecoPointsPerUnit * 10, 100)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
-                  {wasteCategories.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">No waste categories found</p>
-                  )}
-                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={chartData.wasteByType}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {chartData.wasteByType.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            {/* Ward Performance */}
-            <Card className="dashboard-card animate-slide-up" style={{ animationDelay: '0.6s' }}>
+            {/* Waste Collection Trends */}
+            <Card className="bg-card/90 backdrop-blur-sm border-accent/20">
               <CardHeader>
-                <CardTitle>Ward Performance</CardTitle>
-                <CardDescription>Efficiency metrics by ward</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Ward</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Authority</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {wards.map((ward) => (
-                      <TableRow key={ward.id}>
-                        <TableCell className="font-medium">{ward.name}</TableCell>
-                        <TableCell>{ward.description}</TableCell>
-                        <TableCell>{ward.authority.firstName} {ward.authority.lastName}</TableCell>
-                        <TableCell>N/A</TableCell>
-                        <TableCell>
-                          <Badge variant="default">Active</Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {wards.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                          No wards found
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            {/* Trend Chart Placeholder */}
-            <Card className="dashboard-card animate-slide-up" style={{ animationDelay: '0.7s' }}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-citizen-green" />
+                <CardTitle className="flex items-center gap-2 text-accent font-montserrat">
+                  <TrendingUp className="w-5 h-5" />
                   Waste Collection Trends
                 </CardTitle>
-                <CardDescription>Monthly collection data over time</CardDescription>
+                <CardDescription>Monthly collection and recycling rates</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64 bg-gradient-to-br from-eco-light/20 to-recycler-blue/10 rounded-lg flex items-center justify-center">
-                  <div className="text-center text-muted-foreground">
-                    <BarChart3 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>Interactive charts will be available with Supabase integration</p>
-                  </div>
-                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={chartData.wasteTrend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#CDE253" opacity={0.3} />
+                    <XAxis dataKey="month" stroke="#CDE253" />
+                    <YAxis stroke="#CDE253" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#115132', 
+                        border: '1px solid #CDE253',
+                        borderRadius: '8px',
+                        color: '#CDE253'
+                      }} 
+                    />
+                    <Line type="monotone" dataKey="collected" stroke="#CDE253" strokeWidth={3} />
+                    <Line type="monotone" dataKey="recycled" stroke="#115132" strokeWidth={3} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Ward Performance Table */}
+            <Card className="bg-card/90 backdrop-blur-sm border-accent/20">
+              <CardHeader>
+                <CardTitle className="text-accent font-montserrat">Ward Performance</CardTitle>
+                <CardDescription>Collection efficiency by region</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData.wardPerformance}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#CDE253" opacity={0.3} />
+                    <XAxis dataKey="ward" stroke="#CDE253" />
+                    <YAxis stroke="#CDE253" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#115132', 
+                        border: '1px solid #CDE253',
+                        borderRadius: '8px',
+                        color: '#CDE253'
+                      }} 
+                    />
+                    <Bar dataKey="collections" fill="#CDE253" />
+                    <Bar dataKey="efficiency" fill="#115132" />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
 
           {/* Management Panel */}
           <div className="space-y-6">
-            {/* Quick Actions */}
-            <Card className="dashboard-card animate-slide-up" style={{ animationDelay: '0.8s' }}>
+            <Card className="bg-card/90 backdrop-blur-sm border-accent/20">
               <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
+                <CardTitle className="text-accent font-montserrat">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full bg-gradient-to-r from-authority-purple to-purple-600 text-white">
+                <Button className="w-full bg-accent hover:bg-accent/90 text-primary font-montserrat" variant="default">
                   <Users className="w-4 h-4 mr-2" />
                   Manage Users
                 </Button>
-                <Button className="w-full" variant="outline">
+                <Button className="w-full border-accent text-accent hover:bg-accent hover:text-primary" variant="outline">
                   <MapPin className="w-4 h-4 mr-2" />
-                  Create New Ward
+                  Add Ward
                 </Button>
-                <Button className="w-full" variant="outline">
+                <Button className="w-full border-accent text-accent hover:bg-accent hover:text-primary" variant="outline">
                   <Trash2 className="w-4 h-4 mr-2" />
                   Add Waste Category
-                </Button>
-                <Button className="w-full" variant="outline">
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  Generate Reports
                 </Button>
               </CardContent>
             </Card>
 
-            {/* User Management */}
-            <Card className="dashboard-card animate-slide-up" style={{ animationDelay: '0.9s' }}>
+            <Card className="bg-card/90 backdrop-blur-sm border-accent/20">
               <CardHeader>
-                <CardTitle>Recent User Activity</CardTitle>
-                <CardDescription>Latest registrations and updates</CardDescription>
+                <CardTitle className="text-accent font-montserrat">Recent User Activity</CardTitle>
+                <CardDescription>Latest user registrations and status changes</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {users.slice(0, 5).map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                      <div className="space-y-1">
-                        <div className="font-medium text-sm">{user.firstName} {user.lastName}</div>
-                        <div className="text-xs text-muted-foreground">{user.role.toLowerCase()} • {user.email}</div>
+                    <div key={user.id} className="flex items-center justify-between p-2 border border-accent/20 rounded">
+                      <div className="flex-1">
+                        <p className="font-medium text-accent text-sm">{user.firstName} {user.lastName}</p>
+                        <p className="text-xs text-accent/70">{user.role}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={user.active ? 'default' : 'secondary'}>
-                          {user.active ? 'active' : 'inactive'}
+                        <Badge variant={user.active ? "default" : "secondary"} className={user.active ? "bg-accent text-primary" : ""}>
+                          {user.active ? 'Active' : 'Inactive'}
                         </Badge>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => user.active ? handleDeactivateUser(user.id) : handleActivateUser(user.id)}
-                        >
-                          {user.active ? 'Deactivate' : 'Activate'}
-                        </Button>
+                        {user.active ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeactivateUser(user.id)}
+                            className="text-xs border-accent/50 text-accent/70 hover:bg-accent hover:text-primary"
+                          >
+                            Deactivate
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleActivateUser(user.id)}
+                            className="text-xs border-accent text-accent hover:bg-accent hover:text-primary"
+                          >
+                            Activate
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
-                  {users.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">No users found</p>
-                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* System Health */}
-            <Card className="dashboard-card animate-slide-up" style={{ animationDelay: '1.0s' }}>
+            <Card className="bg-card/90 backdrop-blur-sm border-accent/20">
               <CardHeader>
-                <CardTitle>System Health</CardTitle>
+                <CardTitle className="text-accent font-montserrat">System Health</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">API Status</span>
-                  <Badge className="bg-citizen-green text-white">Online</Badge>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-accent/70">API Status</span>
+                    <span className="font-medium text-accent">Online</span>
+                  </div>
+                  <div className="w-full bg-accent/20 rounded-full h-2">
+                    <div className="bg-accent h-2 rounded-full" style={{ width: '100%' }}></div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Database</span>
-                  <Badge className="bg-citizen-green text-white">Healthy</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Active Sessions</span>
-                  <span className="text-sm font-medium">247</span>
+                
+                <div className="grid grid-cols-2 gap-4 pt-4">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-accent">{activeUsers.length}</div>
+                    <div className="text-xs text-accent/70">Active Users</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-accent">99.9%</div>
+                    <div className="text-xs text-accent/70">Uptime</div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

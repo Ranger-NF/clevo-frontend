@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Mail, Lock, User, Phone, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { authService } from '@/services/auth';
+import { authorityApi } from '@/services/api';
 
 interface AuthFormProps {
   userType: 'citizen' | 'recycler' | 'authority';
@@ -23,25 +25,42 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
     password: '',
     confirmPassword: '',
     address: '',
-    phoneNumber: ''
+    phoneNumber: '',
+    wardId: ''
   });
+  const [wards, setWards] = useState<Array<{id: string; name: string; description: string}>>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (userType === 'citizen' && !isLogin) {
+      loadWards();
+    }
+  }, [userType, isLogin]);
+
+  const loadWards = async () => {
+    try {
+      const wardsData = await authorityApi.listWards();
+      setWards(wardsData);
+    } catch (error) {
+      // Silently fail - wards loading is not critical for auth
+    }
+  };
 
   const userTypeConfig = {
     citizen: {
       title: 'Citizen Portal',
-      color: 'citizen-green',
+      color: 'primary',
       description: 'Access your eco-friendly waste management dashboard'
     },
     recycler: {
-      title: 'Recycler Dashboard',
-      color: 'recycler-blue',
+      title: 'Recycler Dashboard', 
+      color: 'primary',
       description: 'Manage pickup slots and coordinate waste collection'
     },
     authority: {
       title: 'Authority Panel',
-      color: 'authority-purple',
+      color: 'primary',
       description: 'Monitor and analyze waste management operations'
     }
   };
@@ -68,7 +87,7 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
           password: formData.password,
         });
       } else {
-        await authService.register({
+        const registerData: any = {
           username: formData.username,
           email: formData.email,
           password: formData.password,
@@ -77,7 +96,14 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
           lastName: formData.lastName,
           address: formData.address,
           phoneNumber: formData.phoneNumber,
-        });
+        };
+
+        // Add wardId only for citizens
+        if (userType === 'citizen' && formData.wardId) {
+          registerData.wardId = formData.wardId;
+        }
+
+        await authService.register(registerData);
       }
 
       toast({
@@ -102,25 +128,25 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-eco-light/5 to-secondary/30 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-primary flex items-center justify-center p-6">
       <div className="w-full max-w-md animate-fade-in">
         {/* Back Button */}
         <Button
           variant="ghost"
           onClick={onBack}
-          className="mb-6 text-muted-foreground hover:text-foreground"
+          className="mb-6 text-accent hover:text-accent/80"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Selection
         </Button>
 
-        <Card className="shadow-2xl border-0 bg-gradient-to-br from-card to-muted/30">
+        <Card className="shadow-2xl border-0 bg-card/90 backdrop-blur-sm">
           <CardHeader className="text-center space-y-4 pb-8">
-            <div className={`w-16 h-16 mx-auto rounded-full bg-${config.color}/10 flex items-center justify-center`}>
-              <div className={`w-8 h-8 rounded-full bg-${config.color}`}></div>
+            <div className="w-16 h-16 mx-auto rounded-full bg-accent/20 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-accent"></div>
             </div>
             <div>
-              <CardTitle className="text-2xl font-bold">
+              <CardTitle className="text-2xl font-bold font-montserrat text-primary">
                 {config.title}
               </CardTitle>
               <CardDescription className="text-base mt-2">
@@ -233,6 +259,27 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
                       />
                     </div>
                   </div>
+
+                  {/* Ward selection only for citizens */}
+                  {userType === 'citizen' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="ward" className="text-sm font-medium">
+                        Ward
+                      </Label>
+                      <Select value={formData.wardId} onValueChange={(value) => handleInputChange('wardId', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your ward" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border border-border">
+                          {wards.map((ward) => (
+                            <SelectItem key={ward.id} value={ward.id}>
+                              {ward.name} - {ward.description}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -277,7 +324,7 @@ const AuthForm = ({ userType, onBack, onAuth }: AuthFormProps) => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-eco-primary to-eco-secondary text-white hover:scale-105 transition-all duration-300 py-3 font-montserrat"
+                className="w-full bg-accent hover:bg-accent/90 text-primary font-montserrat py-3 transition-all duration-300 hover:scale-105"
                 size="lg"
               >
                 {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
