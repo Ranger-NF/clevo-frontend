@@ -367,10 +367,11 @@ const CitizenDashboard = ({ onLogout }: CitizenDashboardProps) => {
                 <div className="space-y-4">
                   {bookings.slice(0, 3).map((booking) => {
                     const { date, time } = formatDateTime(booking.createdAt);
-                    console.log(booking )
-                    const points = ( booking.wasteCategory.ecoPointsPerUnit) ?
-                      booking.wasteCategory.ecoPointsPerUnit *
-                      booking.actualQuantity : 0;
+
+                    const points = booking.wasteCategory.ecoPointsPerUnit
+                      ? booking.wasteCategory.ecoPointsPerUnit *
+                        booking.actualQuantity
+                      : 0;
                     return (
                       <div
                         key={booking.id}
