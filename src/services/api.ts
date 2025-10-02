@@ -1,6 +1,6 @@
 import { authService } from "./auth";
 
-const API_BASE_URL = "http://localhost:8080/api";
+const API_BASE_URL = "https://levo.ranger.hackclub.app/api";
 
 // Types based on the OpenAPI schema
 export interface User {
